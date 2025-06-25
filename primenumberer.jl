@@ -1,7 +1,9 @@
+using Base.Threads
+
 function calcPrimes()
     currNum = 3
     println("2")
-    primes = []
+    primes = [2]
     while true
         isPrime = true
         for num in primes
@@ -21,5 +23,6 @@ function calcPrimes()
     end
 end
 
-
+startTime = time()
 calcPrimes()
+print(time() - startTime)
