@@ -4,7 +4,8 @@ function calcPrimes()
     currNum = 3
     println("2")
     primes = [2]
-    while true
+    # 29.907999992370605
+    while last(primes) < 5000000
         isPrime = true
         for num in primes
             if (num > sqrt(currNum))
