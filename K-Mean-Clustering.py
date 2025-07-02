@@ -8,7 +8,7 @@ import random
 
 def generate_particles(n_particles=10000):
     np.random.seed(random.randint(1, 1000))
-    return np.random.rand(n_particles, 3)
+    return np.random.rand(n_particles, 2)
 
 
 def normalize_particles(particles):
@@ -30,7 +30,7 @@ def balanced_kmeans(X, k, max_iter=500):
     
     N = len(X)
     group_size = N // k
-    assert N % k == 0, ValueError("Number of particles must be divisible by k for equal-sized clusters.")
+    assert N % k == 0, "Number of particles must be divisible by k for equal-sized clusters."
 
     centroids = X[np.random.choice(N, k, replace=False)]
     labels = np.zeros(N, dtype=int)
@@ -60,14 +60,14 @@ def balanced_kmeans(X, k, max_iter=500):
 
 def visualize_clusters(X, labels, title="3D Particle Clustering"):
     fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    scatter = ax.scatter(X[:, 0], X[:, 1], X[:, 2], c=labels, cmap='tab20', s=20)
+    ax = fig.add_subplot(111)
+    scatter = ax.scatter(X[:, 0], X[:, 1], c=labels, cmap='tab20', s=20)
     ax.set_title(title)
     plt.colorbar(scatter, ax=ax, label='Cluster ID')
     plt.show()
 
 
-num_particles = 10000
+num_particles = 1000
 num_clusters = 10
 
 print(f"Generating {num_particles} 3D particles...")
