@@ -18,8 +18,10 @@ z_bins = bins_per_axis  # Change to 1 for 2D
 partitions = x_bins * y_bins * z_bins
 box_size = sim.trajectory[0].dimensions[0]
 partition_size = box_size / bins_per_axis
-print(f"Partition Size: {partition_size} cubic angstroms")
 radius_from_center = 3.5
+
+assert partition_size >= 2*radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2*radius_from_center}).\nDecrease radius_from_center or decrease bisections to continue.")
+print(f"Partition Size: {partition_size} cubic angstroms")
 nframes = sim.trajectory.n_frames
 
 def get_distinct_color(i, total):
@@ -54,10 +56,9 @@ def center_of_box(index):
 def distance3D(coord1, coord2):
     return math.sqrt((coord1[0] - coord2[0]) ** 2 + (coord1[1] - coord2[1]) ** 2 + (coord1[2] - coord2[2]) ** 2)
 
-oxygens = sim.select_atoms('name OH2')
-
 # Count oxygens near center for each box in each frame
 particles_near_center = []
+oxygens = sim.select_atoms('name OH2')
 
 for frame in range(nframes):
     sim.trajectory[frame]
@@ -90,8 +91,6 @@ for frame in particles_near_center:
     for count in frame:
         flat_counts.append(count)
 
-
-# Histogram
 fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
 n, bins, patches = ax.hist(
     flat_counts,
@@ -107,9 +106,7 @@ ax.grid(axis='y', linestyle='--', alpha=0.6)
 for count, x in zip(n, bins[:-1]):
     if count > 0:
         ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
-plt.show()
 
-# Visualization
 d = input("Dimensions? (2 or 3): ").strip()
 if d == "2":
     fig, ax = plt.subplots(figsize=(8, 8))
@@ -154,6 +151,6 @@ else:
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    ax.set_title('3D Water Box Sections')
+    ax.set_title('3D Water Box Sections At End Of Simulation')
     # ax.legend()
 plt.show()
