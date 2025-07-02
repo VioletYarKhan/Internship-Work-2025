@@ -30,8 +30,7 @@ def balanced_kmeans(X, k, max_iter=500):
     
     N = len(X)
     group_size = N // k
-    if N % k != 0:
-        raise ValueError("Number of particles must be divisible by k for equal-sized clusters.")
+    assert N % k == 0, ValueError("Number of particles must be divisible by k for equal-sized clusters.")
 
     centroids = X[np.random.choice(N, k, replace=False)]
     labels = np.zeros(N, dtype=int)
@@ -68,24 +67,19 @@ def visualize_clusters(X, labels, title="3D Particle Clustering"):
     plt.show()
 
 
-def main():
-    num_particles = 10000
-    num_clusters = 10
+num_particles = 10000
+num_clusters = 10
 
-    print(f"Generating {num_particles} 3D particles...")
-    particles = generate_particles(num_particles)
-    
-    print("Normalizing particles...")
-    normalized_particles = normalize_particles(particles)
-    
-    print(f"Clustering into {num_clusters} equal-sized groups...")
-    labels, centroids = balanced_kmeans(normalized_particles, k=num_clusters)
+print(f"Generating {num_particles} 3D particles...")
+particles = generate_particles(num_particles)
 
-    print("Visualizing result...")
-    visualize_clusters(normalized_particles, labels)
+print("Normalizing particles...")
+normalized_particles = normalize_particles(particles)
 
-    print("Done.")
+print(f"Clustering into {num_clusters} equal-sized groups...")
+labels, centroids = balanced_kmeans(normalized_particles, k=num_clusters)
 
+print("Visualizing result...")
+visualize_clusters(normalized_particles, labels)
 
-if __name__ == "__main__":
-    main()
+print("Done.")
