@@ -5,6 +5,12 @@ from matplotlib import cm
 import MDAnalysis as md
 import math
 import string, sys, os
+from mpi4py import MPI
+
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
 
 PSF = r'w4096.psf'
 DCD = r'sample.dcd'
