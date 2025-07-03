@@ -25,7 +25,6 @@ if rank == 0:
         positions = oxygens.positions.copy()
         positions += box_size / 2  # adjust
         oxy_positions_per_frame.append(positions)
-    del sim  # free memory
 else:
     oxy_positions_per_frame = None
     nframes = None
@@ -63,31 +62,30 @@ def center_of_box(index):
 def distance3D(coord1, coord2):
     return math.sqrt(sum((coord1[i] - coord2[i]) ** 2 for i in range(3)))
 
-# Assign partitions to MPI ranks
-all_indices = list(range(partitions))
-local_indices = all_indices[rank::size]
 
 # Per-frame computation: each rank processes a subset of boxes per frame
 local_particles_near_center = []
 
-for frame_id in range(nframes):
-    positions = oxy_positions_per_frame[frame_id]
+for frame in range(nframes):
     boxes = [[] for _ in range(partitions)]
-    for particle in positions:
+    for particle in oxygens.atoms.positions:
         xID = int((particle[0] / box_size) / (1 / (x_bins)))
         yID = int((particle[1] / box_size) / (1 / (y_bins)))
         zID = int((particle[2] / box_size) / (1 / (z_bins)))
+
         xID = min(max(xID, 0), x_bins - 1)
         yID = min(max(yID, 0), y_bins - 1)
         zID = min(max(zID, 0), z_bins - 1)
         boxIndex = xID + yID * x_bins + zID * x_bins * y_bins
         boxes[boxIndex].append(particle)
-
-    frame_counts = [0] * partitions
-    for i in local_indices:
+    frame_counts = []
+    for i, box in enumerate(boxes):
         center = center_of_box(i)
-        count = sum(distance3D(p, center) <= radius_from_center for p in boxes[i])
-        frame_counts[i] = count
+        count = 0
+        for particle in box:
+            if distance3D((particle[0], particle[1], particle[2]), center) <= radius_from_center:
+                count += 1
+        frame_counts.append(count)
     local_particles_near_center.append(frame_counts)
 
 # Gather results from all ranks
@@ -117,5 +115,7 @@ if rank == 0:
     for count, x in zip(n, bins[:-1]):
         if count > 0:
             ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
-
+    output_path = os.path.join(os.environ.get("SLURM_SUBMIT_DIR", "."), "Histogram.png")
+    plt.savefig(output_path)
+    print(f"Plot saved to: {output_path}")
     plt.show()

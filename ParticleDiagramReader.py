@@ -4,159 +4,122 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import MDAnalysis as md
 import math
-import string, sys, os
 from mpi4py import MPI
+import csv
 
-
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-size = comm.Get_size()
-
-PSF = r'w4096.psf'
-DCD = r'sample.dcd'
-sim = md.Universe(PSF, DCD)
-
-bisections = 1
-bins_per_axis = bisections + 1
-x_bins = bins_per_axis
-y_bins = bins_per_axis
-z_bins = bins_per_axis  # Change to 1 for 2D
-partitions = x_bins * y_bins * z_bins
-box_size = sim.trajectory[0].dimensions[0]
-partition_size = box_size / bins_per_axis
-radius_from_center = 3.5
-
-assert partition_size >= 2*radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2*radius_from_center}).\nDecrease radius_from_center or decrease bisections to continue.")
-print(f"Partition Size: {partition_size} cubic angstroms")
-nframes = sim.trajectory.n_frames
-
-def get_distinct_color(i, total):
-    if total <= 20:
-        cmap = plt.get_cmap('tab20', total)
-        return cmap(i)
-    elif total <= 40:
-        if i < 20:
-            cmap = plt.get_cmap('tab20', 20)
-            return cmap(i)
-        else:
-            cmap = plt.get_cmap('tab20b', 20)
-            return cmap(i-20)
-    else:
-        cmap = plt.get_cmap('hsv', total)
-        return cmap(i)
-
-def index_to_xyz(index):
+def index_to_xyz(index, x_bins, y_bins):
     z = index // (x_bins * y_bins)
     remainder = index % (x_bins * y_bins)
     y = remainder // x_bins
     x = remainder % x_bins
     return [x, y, z]
 
-def center_of_box(index):
-    boxcoords = index_to_xyz(index)
-    boxcentercoords = []
-    for pos in boxcoords:
-        boxcentercoords.append(round(((pos / bins_per_axis) * box_size + (box_size / bins_per_axis) / 2), 2))
-    return boxcentercoords
+def center_of_box(index, x_bins, y_bins, bins_per_axis, box_size):
+    boxcoords = index_to_xyz(index, x_bins, y_bins)
+    return [((pos + 0.5) * (box_size / bins_per_axis)) for pos in boxcoords]
 
 def distance3D(coord1, coord2):
-    return math.sqrt((coord1[0] - coord2[0]) ** 2 + (coord1[1] - coord2[1]) ** 2 + (coord1[2] - coord2[2]) ** 2)
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(coord1, coord2)))
 
-# Count oxygens near center for each box in each frame
-particles_near_center = []
-oxygens = sim.select_atoms('name OH2')
+if __name__ == "__main__":
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
 
-for frame in range(nframes):
-    sim.trajectory[frame]
-    for atom in oxygens:
-        atom.position += box_size/2
-    boxes = [[] for _ in range(partitions)]
-    for particle in oxygens.atoms.positions:
-        xID = int((particle[0] / box_size) / (1 / (x_bins)))
-        yID = int((particle[1] / box_size) / (1 / (y_bins)))
-        zID = int((particle[2] / box_size) / (1 / (z_bins)))
+    PSF = 'w4096.psf'
+    DCD = 'sample.dcd'
+    sim = md.Universe(PSF, DCD)
 
-        xID = min(max(xID, 0), x_bins - 1)
-        yID = min(max(yID, 0), y_bins - 1)
-        zID = min(max(zID, 0), z_bins - 1)
-        boxIndex = xID + yID * x_bins + zID * x_bins * y_bins
-        boxes[boxIndex].append(particle)
-    frame_counts = []
-    for i, box in enumerate(boxes):
-        center = center_of_box(i)
-        count = 0
-        for particle in box:
-            if distance3D((particle[0], particle[1], particle[2]), center) <= radius_from_center:
-                count += 1
-        frame_counts.append(count)
-    particles_near_center.append(frame_counts)
+    bisections = 1
+    bins_per_axis = bisections + 1
+    x_bins = bins_per_axis
+    y_bins = bins_per_axis
+    z_bins = bins_per_axis
+    partitions = x_bins * y_bins * z_bins
+    box_size = sim.trajectory[0].dimensions[0]
+    partition_size = box_size / bins_per_axis
+    radius_from_center = 3.5
 
-# Flatten for histogram
-flat_counts = []
-for frame in particles_near_center:
-    for count in frame:
-        flat_counts.append(count)
+    assert partition_size >= 2 * radius_from_center, (
+        f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center})."
+    )
 
-fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
-n, bins, patches = ax.hist(
-    flat_counts,
-    bins='auto',
-    color='#4a90e2',
-    edgecolor='black',
-    alpha=0.85
-)
-ax.set_xlabel(f"Oxygens within {radius_from_center} Angstroms of partition center", fontsize=12)
-ax.set_ylabel("Number of partitions", fontsize=12)
-ax.set_title(f"Distribution of Oxygens Near Partition Centers\n(within {radius_from_center} Angstroms)", fontsize=14)
-ax.grid(axis='y', linestyle='--', alpha=0.6)
-for count, x in zip(n, bins[:-1]):
-    if count > 0:
-        ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
+    if rank == 0:
+        print(f"Partition Size: {partition_size:.2f} Å")
 
-d = input("Dimensions? (2 or 3): ").strip()
-if d == "2":
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.set_xlim(0, box_size)
-    ax.set_ylim(0, box_size)
-    for i, box in enumerate(boxes):
-        if len(box) == 0:
-            continue
-        box = np.array(box)
-        if box.ndim == 2 and box.shape[1] >= 2:
-            ax.scatter(box[:, 0], box[:, 1], color=get_distinct_color(i, partitions), label=f'Section {i+1}', s=10, alpha=0.7)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_title('XY-Bisection')
-    # ax.legend()
+    nframes = sim.trajectory.n_frames
+    oxygens = sim.select_atoms('name OH2')
 
-    fig2, ax2 = plt.subplots(figsize=(8, 8))
-    ax2.set_xlim(0, box_size)
-    ax2.set_ylim(0, box_size)
-    for i, box in enumerate(boxes):
-        if len(box) == 0:
-            continue
-        box = np.array(box)
-        if box.ndim == 2 and box.shape[1] >= 3:
-            ax2.scatter(box[:, 0], box[:, 2], color=get_distinct_color(i, partitions), label=f'Section {i+1}', s=10, alpha=0.7)
-    ax2.set_xlabel('X')
-    ax2.set_ylabel('Z')
-    ax2.set_title('XZ-Bisection')
-    # ax2.legend()
-else:
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlim(0, box_size)
-    ax.set_ylim(0, box_size)
-    ax.set_zlim(0, box_size)
-    for i, box in enumerate(boxes):
-        if len(box) == 0:
-            continue
-        box = np.array(box)
-        if box.ndim == 2 and box.shape[1] >= 3:
-            ax.scatter(box[:, 0], box[:, 1], box[:, 2], color=get_distinct_color(i, partitions), label=f'Section {i+1}', s=10, alpha=0.7)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title('3D Water Box Sections At End Of Simulation')
-    # ax.legend()
-plt.show()
+    particles_near_center = []
+
+    for frame in range(nframes):
+        sim.trajectory[frame]
+
+        # Shift coordinates for safety
+        for atom in oxygens:
+            atom.position += box_size / 2
+
+        boxes = [[] for _ in range(partitions)]
+        for particle in oxygens.positions:
+            xID = int((particle[0] / box_size) * x_bins)
+            yID = int((particle[1] / box_size) * y_bins)
+            zID = int((particle[2] / box_size) * z_bins)
+
+            xID = min(max(xID, 0), x_bins - 1)
+            yID = min(max(yID, 0), y_bins - 1)
+            zID = min(max(zID, 0), z_bins - 1)
+            boxIndex = xID + yID * x_bins + zID * x_bins * y_bins
+            boxes[boxIndex].append(particle)
+
+        # Rank 0 splits the boxes
+        if rank == 0:
+            box_chunks = np.array_split(boxes, size)
+        else:
+            box_chunks = None
+
+        local_boxes = comm.scatter(box_chunks, root=0)
+
+        # Local offset per rank
+        box_sizes = comm.allgather(len(local_boxes))  # each rank tells how many boxes it got
+        local_offset = sum(box_sizes[:rank])
+
+        local_counts = []
+        for i, box in enumerate(local_boxes):
+            global_index = local_offset + i
+            center = center_of_box(global_index, x_bins, y_bins, bins_per_axis, box_size)
+            count = sum(1 for particle in box if distance3D(particle, center) <= radius_from_center)
+            local_counts.append(count)
+
+        # Gather back to root
+        frame_counts = comm.gather(local_counts, root=0)
+
+        if rank == 0:
+            flat = [c for rank_result in frame_counts for c in rank_result]
+            particles_near_center.append(flat)
+
+    # Rank 0 plots results
+    if rank == 0:
+        flat_counts = [c for frame in particles_near_center for c in frame]
+
+        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+        n, bins, patches = ax.hist(
+            flat_counts,
+            bins='auto',
+            color='#4a90e2',
+            edgecolor='black',
+            alpha=0.85
+        )
+        ax.set_xlabel(f"Oxygens within {radius_from_center} Å of partition center", fontsize=12)
+        ax.set_ylabel("Number of partitions", fontsize=12)
+        ax.set_title("Distribution of Oxygens Near Partition Centers", fontsize=14)
+        ax.grid(axis='y', linestyle='--', alpha=0.6)
+        for count, x in zip(n, bins[:-1]):
+            if count > 0:
+                ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
+        plt.savefig("WaterHistogram.png", format='png')
+        plt.show()
+        with open("particles_near_center.csv", "w", newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(["Frame", *[f"Box{i}" for i in range(partitions)]])
+            for frame_idx, frame in enumerate(particles_near_center):
+                writer.writerow([frame_idx] + frame)
