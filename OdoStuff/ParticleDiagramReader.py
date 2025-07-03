@@ -7,6 +7,18 @@ import math
 from mpi4py import MPI
 import csv
 
+def array_split(lst, num_splits):
+    n = len(lst)
+    quotient, remainder = divmod(n, num_splits)
+
+    result = []
+    start = 0
+    for i in range(num_splits):
+        end = start + quotient + (1 if i < remainder else 0)
+        result.append(lst[start:end])
+        start = end
+    return result
+
 def index_to_xyz(index, x_bins, y_bins):
     z = index // (x_bins * y_bins)
     remainder = index % (x_bins * y_bins)
@@ -72,10 +84,11 @@ if __name__ == "__main__":
 
         # Rank 0 splits the boxes
         if rank == 0:
-            box_chunks = np.array_split(boxes, size)
+            box_chunks = array_split(boxes, size)
         else:
             box_chunks = None
 
+        
         local_boxes = comm.scatter(box_chunks, root=0)
 
         # Local offset per rank
