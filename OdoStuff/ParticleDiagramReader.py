@@ -103,7 +103,7 @@ if __name__ == "__main__":
             count = sum(1 for particle in box if distance3D(particle, center) <= radius_from_center)
             local_counts.append(count)
 
-        print(f"Rank {rank} finished boxes {local_boxes}")
+        print(f"Rank {rank} finished boxes {local_boxes}\n")
 
 
         # Gather back to root
