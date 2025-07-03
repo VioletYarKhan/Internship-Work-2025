@@ -30,8 +30,7 @@ if __name__ == "__main__":
     DCD = 'sample.dcd'
     sim = md.Universe(PSF, DCD)
 
-    bisections = 1
-    bins_per_axis = bisections + 1
+    bins_per_axis = 2
     x_bins = bins_per_axis
     y_bins = bins_per_axis
     z_bins = bins_per_axis
@@ -84,11 +83,15 @@ if __name__ == "__main__":
         local_offset = sum(box_sizes[:rank])
 
         local_counts = []
+        print(f"Rank {rank} finished boxes {local_boxes}")
         for i, box in enumerate(local_boxes):
             global_index = local_offset + i
             center = center_of_box(global_index, x_bins, y_bins, bins_per_axis, box_size)
             count = sum(1 for particle in box if distance3D(particle, center) <= radius_from_center)
             local_counts.append(count)
+
+        print(f"Rank {rank} finished boxes {local_boxes}")
+
 
         # Gather back to root
         frame_counts = comm.gather(local_counts, root=0)
