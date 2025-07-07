@@ -90,12 +90,12 @@ if __name__ == "__main__":
 
         local_counts = []
         for i, box in enumerate(local_boxes):
-            print(f"Rank {rank} started box {i} of frame {frame}")
             global_index = local_offset + i
+            print(f"Rank {rank} started box {global_index} of frame {frame}")
             center = center_of_box(global_index, x_bins, y_bins, bins_per_axis, box_size)
             count = sum(1 for particle in box if distance3D(particle, center) <= radius_from_center)
             local_counts.append(count)
-            print(f"Rank {rank} finished box {i} of frame {frame}")
+            print(f"Rank {rank} finished box {global_index} of frame {frame}")
 
 
         # Gather back to root
