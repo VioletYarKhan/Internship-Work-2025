@@ -7,18 +7,6 @@ import math
 from mpi4py import MPI
 import csv
 
-def array_split(lst, num_splits):
-    n = len(lst)
-    quotient, remainder = divmod(n, num_splits)
-
-    result = []
-    start = 0
-    for i in range(num_splits):
-        end = start + quotient + (1 if i < remainder else 0)
-        result.append(lst[start:end])
-        start = end
-    return result
-
 def index_to_xyz(index, x_bins, y_bins):
     z = index // (x_bins * y_bins)
     remainder = index % (x_bins * y_bins)
@@ -42,12 +30,15 @@ if __name__ == "__main__":
     DCD = 'sample.dcd'
     sim = md.Universe(PSF, DCD)
 
-    bins_per_axis = 2
+    box_size = sim.trajectory[0].dimensions[0]
+    partition_size_wanted = 10
+    bins_per_axis = round(box_size/partition_size_wanted)
+    # bins_per_axis = 2
+
     x_bins = bins_per_axis
     y_bins = bins_per_axis
     z_bins = bins_per_axis
     partitions = x_bins * y_bins * z_bins
-    box_size = sim.trajectory[0].dimensions[0]
     partition_size = box_size / bins_per_axis
     radius_from_center = 3.5
 
@@ -56,7 +47,7 @@ if __name__ == "__main__":
     )
 
     if rank == 0:
-        print(f"Partition Size: {partition_size:.2f} Å")
+        print(f'{bins_per_axis} bins per axis of {partition_size} cubic angstroms')
 
     nframes = sim.trajectory.n_frames
     oxygens = sim.select_atoms('name OH2')
@@ -84,7 +75,9 @@ if __name__ == "__main__":
 
         # Rank 0 splits the boxes
         if rank == 0:
-            box_chunks = array_split(boxes, size)
+            box_chunks = [[] for _ in range(size)]
+            for i, box in enumerate(boxes):
+                box_chunks[i%size].append(box)
         else:
             box_chunks = None
 
