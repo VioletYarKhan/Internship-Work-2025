@@ -31,7 +31,7 @@ if __name__ == "__main__":
     sim = md.Universe(PSF, DCD)
 
     box_size = sim.trajectory[0].dimensions[0]
-    partition_size_wanted = 10
+    partition_size_wanted = 15
     bins_per_axis = round(box_size/partition_size_wanted)
     # bins_per_axis = 2
 
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     z_bins = bins_per_axis
     partitions = x_bins * y_bins * z_bins
     partition_size = box_size / bins_per_axis
-    radius_from_center = 3.5
+    radius_from_center = 3
 
     assert partition_size >= 2 * radius_from_center, (
         f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center})."
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         ax2.hist(all_distances, bins=100, color='teal', edgecolor='black', alpha=0.75)
         ax2.set_xlabel("Distance (Å)", fontsize=12)
         ax2.set_ylabel("Frequency", fontsize=12)
-        ax2.set_title("Histogram of Pairwise Distances Near Partition Centers", fontsize=14)
+        ax2.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
         ax2.grid(True, linestyle='--', alpha=0.6)
         plt.savefig("DistanceHistogram.png", format='png')
 
