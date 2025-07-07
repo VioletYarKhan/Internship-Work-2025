@@ -52,6 +52,8 @@ if __name__ == "__main__":
     nframes = sim.trajectory.n_frames
     oxygens = sim.select_atoms('name OH2')
 
+    particles_near_center = []
+
     for frame in range(nframes):
         sim.trajectory[frame]
 
@@ -117,30 +119,31 @@ if __name__ == "__main__":
         frame_distances = comm.gather(pairwise_distances, root=0)
 
         if rank == 0:
-            particles_near_center = [c for rank_result in frame_counts for c in rank_result]
+            flat = [c for rank_result in frame_counts for c in rank_result]
+            particles_near_center.append(flat)
             all_distances = [d for rank_d in frame_distances for d in rank_d]
 
     # Rank 0 plots results
     if rank == 0:
-        flat_counts = [c for frame in particles_near_center for c in frame]
+        # flat_counts = [c for frame in particles_near_center for c in frame]
 
-        counts_per_n = list(range(0, max(flat_counts)))
-        for n in flat_counts:
-            counts_per_n[n-1] += 1
-        for i in range(len(counts_per_n)):
-            counts_per_n[i] /= len(flat_counts)
+        # counts_per_n = list(range(0, max(flat_counts)))
+        # for n in flat_counts:
+        #     counts_per_n[n-1] += 1
+        # for i in range(len(counts_per_n)):
+        #     counts_per_n[i] /= len(flat_counts)
 
-        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+        # fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
 
-        ax.scatter(list(range(0, max(flat_counts))), counts_per_n)
-        ax.set_yscale('log')
+        # ax.scatter(list(range(0, max(flat_counts))), counts_per_n)
+        # ax.set_yscale('log')
 
-        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
-        ax.hist(all_distances, bins=100, color='teal', edgecolor='black', alpha=0.75)
-        ax.set_xlabel("Distance (Å)", fontsize=12)
-        ax.set_ylabel("Frequency", fontsize=12)
-        ax.set_title("Histogram of Pairwise Distances Near Partition Centers", fontsize=14)
-        ax.grid(True, linestyle='--', alpha=0.6)
+        fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
+        ax2.hist(all_distances, bins=100, color='teal', edgecolor='black', alpha=0.75)
+        ax2.set_xlabel("Distance (Å)", fontsize=12)
+        ax2.set_ylabel("Frequency", fontsize=12)
+        ax2.set_title("Histogram of Pairwise Distances Near Partition Centers", fontsize=14)
+        ax2.grid(True, linestyle='--', alpha=0.6)
         plt.savefig("DistanceHistogram.png", format='png')
 
         plt.show()
