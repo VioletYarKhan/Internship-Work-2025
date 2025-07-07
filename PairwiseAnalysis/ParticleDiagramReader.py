@@ -52,8 +52,6 @@ if __name__ == "__main__":
     nframes = sim.trajectory.n_frames
     oxygens = sim.select_atoms('name OH2')
 
-    particles_near_center = []
-
     for frame in range(nframes):
         sim.trajectory[frame]
 
@@ -89,21 +87,38 @@ if __name__ == "__main__":
         local_offset = sum(box_sizes[:rank])
 
         local_counts = []
+        pairwise_distances = []
         # print(f"Rank {rank} started boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
         for i, box in enumerate(local_boxes):
             global_index = local_offset + i
             center = center_of_box(global_index, x_bins, y_bins, bins_per_axis, box_size)
-            count = sum(1 for particle in box if distance3D(particle, center) <= radius_from_center)
+            central_particles = []
+            noncentral_particles = []
+            for particle in box:
+                if distance3D(particle, center) <= radius_from_center:
+                    central_particles.append(particle)
+                else:
+                    noncentral_particles.append(particle)
+
+            for j, cen_particle in enumerate(central_particles):
+                for particle in noncentral_particles:
+                    pairwise_distances.append(distance3D(particle, cen_particle))
+                for other_central in central_particles[j+1:]:
+                    pairwise_distances.append(distance3D(other_central, cen_particle))
+
+
+            count = len(central_particles)
             local_counts.append(count)
         # print(f"Rank {rank} finished boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
 
 
         # Gather back to root
         frame_counts = comm.gather(local_counts, root=0)
+        frame_distances = comm.gather(pairwise_distances, root=0)
 
         if rank == 0:
-            flat = [c for rank_result in frame_counts for c in rank_result]
-            particles_near_center.append(flat)
+            particles_near_center = [c for rank_result in frame_counts for c in rank_result]
+            all_distances = [d for rank_d in frame_distances for d in rank_d]
 
     # Rank 0 plots results
     if rank == 0:
@@ -119,6 +134,15 @@ if __name__ == "__main__":
 
         ax.scatter(list(range(0, max(flat_counts))), counts_per_n)
         ax.set_yscale('log')
+
+        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+        ax.hist(all_distances, bins=100, color='teal', edgecolor='black', alpha=0.75)
+        ax.set_xlabel("Distance (Å)", fontsize=12)
+        ax.set_ylabel("Frequency", fontsize=12)
+        ax.set_title("Histogram of Pairwise Distances Near Partition Centers", fontsize=14)
+        ax.grid(True, linestyle='--', alpha=0.6)
+        plt.savefig("DistanceHistogram.png", format='png')
+
         plt.show()
         
 
