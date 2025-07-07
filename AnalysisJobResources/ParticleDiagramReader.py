@@ -9,7 +9,7 @@ import csv
 
 def array_split(lst, num_splits):
     n = len(lst)
-    quotient, remainder = divmod(n, num_splits)
+    quotient, remainder = n//num_splits, n%num_splits
 
     result = []
     start = 0
@@ -84,7 +84,9 @@ if __name__ == "__main__":
 
         # Rank 0 splits the boxes
         if rank == 0:
-            box_chunks = array_split(boxes, size)
+            box_chunks = [[] for _ in range(size)]
+            for i, box in enumerate(boxes):
+                box_chunks[i%size].append(box)
         else:
             box_chunks = None
 
