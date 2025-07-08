@@ -7,6 +7,18 @@ import math
 from mpi4py import MPI
 import csv
 
+def array_split(lst, num_splits):
+    n = len(lst)
+    quotient, remainder = divmod(n, num_splits)
+
+    result = []
+    start = 0
+    for i in range(num_splits):
+        end = start + quotient + (1 if i < remainder else 0)
+        result.append(lst[start:end])
+        start = end
+    return result
+
 def index_to_xyz(index, x_bins, y_bins):
     z = index // (x_bins * y_bins)
     remainder = index % (x_bins * y_bins)
@@ -42,9 +54,7 @@ if __name__ == "__main__":
     partition_size = box_size / bins_per_axis
     radius_from_center = 3
 
-    assert partition_size >= 2 * radius_from_center, (
-        f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center})."
-    )
+    assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
 
     if rank == 0:
         print(f'{bins_per_axis} bins per axis of {partition_size} cubic angstroms')
@@ -75,9 +85,7 @@ if __name__ == "__main__":
 
         # Rank 0 splits the boxes
         if rank == 0:
-            box_chunks = [[] for _ in range(size)]
-            for i, box in enumerate(boxes):
-                box_chunks[i%size].append(box)
+            box_chunks = array_split(boxes, size)
         else:
             box_chunks = None
 
@@ -139,7 +147,7 @@ if __name__ == "__main__":
         # ax.set_yscale('log')
 
         fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
-        ax2.hist(all_distances, bins=100, color='teal', edgecolor='black', alpha=0.75)
+        ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
         ax2.set_xlabel("Distance (Å)", fontsize=12)
         ax2.set_ylabel("Frequency", fontsize=12)
         ax2.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
