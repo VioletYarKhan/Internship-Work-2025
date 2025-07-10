@@ -160,7 +160,7 @@ if __name__ == "__main__":
             density_ratios.append((count/inner_volume)/bulk_density)
         n, bins, patches = ax.hist(
             density_ratios,
-            bins='30',
+            bins='auto',
             color='#4a90e2',
             edgecolor='black',
             alpha=0.85,
