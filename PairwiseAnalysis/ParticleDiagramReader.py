@@ -158,9 +158,14 @@ if __name__ == "__main__":
         inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
+
+        bin_width = 0.05  # try 0.05 or smaller for tighter bars
+        min_val, max_val = min(density_ratios), max(density_ratios)
+        bins = np.arange(min_val, max_val + bin_width, bin_width)
+
         n, bins, patches = ax.hist(
             density_ratios,
-            bins=30,
+            bins=bins,
             color='#4a90e2',
             edgecolor='black',
             alpha=0.85,
