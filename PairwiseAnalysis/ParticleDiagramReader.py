@@ -160,7 +160,7 @@ if __name__ == "__main__":
             density_ratios.append((count/inner_volume)/bulk_density)
         n, bins, patches = ax.hist(
             density_ratios,
-            bins='auto',
+            bins=30,
             color='#4a90e2',
             edgecolor='black',
             alpha=0.85,
@@ -175,6 +175,7 @@ if __name__ == "__main__":
                 ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
         plt.savefig("WaterDensity.png", format='png')
         plt.show()
+
         with open("particles_near_center.csv", "w", newline='') as f:
             writer = csv.writer(f)
             writer.writerow(["Frame", *[f"Box{i}" for i in range(partitions)]])
