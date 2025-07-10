@@ -149,7 +149,7 @@ if __name__ == "__main__":
         ax.scatter(list(range(0, max(flat_counts))), counts_per_n)
         ax.set_yscale('log')
 
-        fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
+        ax2 = fig.add_subplot(figsize=(8, 5), tight_layout=True)
         ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
         ax2.set_xlabel("Distance (Å)", fontsize=12)
         ax2.set_ylabel("Frequency", fontsize=12)
