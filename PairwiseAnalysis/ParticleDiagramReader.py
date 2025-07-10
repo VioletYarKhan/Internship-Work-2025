@@ -21,7 +21,7 @@ def array_split(lst, num_splits):
 
 def index_to_xyz(index, x_bins, y_bins):
     z = index // (x_bins * y_bins)
-    remainder = index % (x_bins * y_bins)
+    remainder = index % (x_bins * y_bins) 
     y = remainder // x_bins
     x = remainder % x_bins
     return [x, y, z]
@@ -54,6 +54,7 @@ if __name__ == "__main__":
     partition_size = box_size / bins_per_axis
     radius_from_center = 3
 
+
     assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
 
     if rank == 0:
@@ -61,6 +62,8 @@ if __name__ == "__main__":
 
     nframes = sim.trajectory.n_frames
     oxygens = sim.select_atoms('name OH2')
+
+    bulk_density = len(oxygens)/pow(box_size, 3)
 
     particles_near_center = []
 
@@ -133,18 +136,18 @@ if __name__ == "__main__":
 
     # Rank 0 plots results
     if rank == 0:
-        # flat_counts = [c for frame in particles_near_center for c in frame]
+        flat_counts = [c for frame in particles_near_center for c in frame]
 
-        # counts_per_n = list(range(0, max(flat_counts)))
-        # for n in flat_counts:
-        #     counts_per_n[n-1] += 1
-        # for i in range(len(counts_per_n)):
-        #     counts_per_n[i] /= len(flat_counts)
+        counts_per_n = list(range(0, max(flat_counts)))
+        for n in flat_counts:
+            counts_per_n[n-1] += 1
+        for i in range(len(counts_per_n)):
+            counts_per_n[i] /= sum(flat_counts)
 
-        # fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
 
-        # ax.scatter(list(range(0, max(flat_counts))), counts_per_n)
-        # ax.set_yscale('log')
+        ax.scatter(list(range(0, max(flat_counts))), counts_per_n)
+        ax.set_yscale('log')
 
         fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
         ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
@@ -154,25 +157,26 @@ if __name__ == "__main__":
         ax2.grid(True, linestyle='--', alpha=0.6)
         plt.savefig("DistanceHistogram.png", format='png')
 
-        plt.show()
         
-
-
-        # n, bins, patches = ax.hist(
-        #     flat_counts,
-        #     bins='auto',
-        #     color='#4a90e2',
-        #     edgecolor='black',
-        #     alpha=0.85
-        # )
-        # ax.set_xlabel(f"Oxygens within {radius_from_center} Å of partition center", fontsize=12)
-        # ax.set_ylabel("Number of partitions", fontsize=12)
-        # ax.set_title("Distribution of Oxygens Near Partition Centers", fontsize=14)
-        # ax.grid(axis='y', linestyle='--', alpha=0.6)
-        # for count, x in zip(n, bins[:-1]):
-        #     if count > 0:
-        #         ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
-        # plt.savefig("WaterHistogram.png", format='png')
+        density_ratios = []
+        inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
+        for count in flat_counts:
+            density_ratios.append((flat_counts/inner_volume)/bulk_density)
+        n, bins, patches = ax.hist(
+            density_ratios,
+            bins='auto',
+            color='#4a90e2',
+            edgecolor='black',
+            alpha=0.85
+        )
+        ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
+        ax.set_ylabel("Number of partitions", fontsize=12)
+        ax.set_title("Relative Density of Partition Centers", fontsize=14)
+        ax.grid(axis='y', linestyle='--', alpha=0.6)
+        for count, x in zip(n, bins[:-1]):
+            if count > 0:
+                ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
+        plt.savefig("WaterHistogram.png", format='png')
         plt.show()
         with open("particles_near_center.csv", "w", newline='') as f:
             writer = csv.writer(f)
