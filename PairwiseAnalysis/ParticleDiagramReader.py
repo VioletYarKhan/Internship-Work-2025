@@ -152,7 +152,7 @@ if __name__ == "__main__":
         # ax2.grid(True, linestyle='--', alpha=0.6)
         # plt.savefig("DistanceHistogram.png", format='png')
 
-        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+        fig, ax = plt.subplots(figsize=(5, 5), tight_layout=True)
 
         density_ratios = []
         inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
