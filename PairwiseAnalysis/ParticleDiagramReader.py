@@ -44,15 +44,15 @@ if __name__ == "__main__":
 
     box_size = sim.trajectory[0].dimensions[0]
     partition_size_wanted = 15
-    bins_per_axis = round(box_size/partition_size_wanted)
-    # bins_per_axis = 2
+    # bins_per_axis = round(box_size/partition_size_wanted)
+    bins_per_axis = 10
 
     x_bins = bins_per_axis
     y_bins = bins_per_axis
     z_bins = bins_per_axis
     partitions = x_bins * y_bins * z_bins
     partition_size = box_size / bins_per_axis
-    radius_from_center = 3
+    radius_from_center = 0.1
 
 
     assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
@@ -122,8 +122,8 @@ if __name__ == "__main__":
 
             count = len(central_particles)
             local_counts.append(count)
-        if frame == 0:
-            print(f"Rank {rank} finished boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
+        # if frame == 0:
+        #     print(f"Rank {rank} finished boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
 
 
         # Gather back to root
@@ -138,6 +138,8 @@ if __name__ == "__main__":
     # Rank 0 plots results
     if rank == 0:
         flat_counts = [c for frame in particles_near_center for c in frame]
+
+        print(len(flat_counts))
 
         counts_per_n = list(range(0, max(flat_counts)))
         for n in flat_counts:
