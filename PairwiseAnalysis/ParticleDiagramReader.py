@@ -144,8 +144,6 @@ if __name__ == "__main__":
         for i in range(len(counts_per_n)):
             counts_per_n[i] /= len(flat_counts)
 
-        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
-
         # fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
         # ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
         # ax2.set_xlabel("Distance (Å)", fontsize=12)
@@ -154,17 +152,19 @@ if __name__ == "__main__":
         # ax2.grid(True, linestyle='--', alpha=0.6)
         # plt.savefig("DistanceHistogram.png", format='png')
 
-        
+        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+
         density_ratios = []
         inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
         n, bins, patches = ax.hist(
             density_ratios,
-            bins='auto',
+            bins='30',
             color='#4a90e2',
             edgecolor='black',
-            alpha=0.85
+            alpha=0.85,
+            rwidth=1
         )
         ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
         ax.set_ylabel("Number of partitions", fontsize=12)
