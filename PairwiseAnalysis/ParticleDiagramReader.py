@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
         local_counts = []
         pairwise_distances = []
-        # print(f"Rank {rank} started boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
+        print(f"Rank {rank} started boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
         for i, box in enumerate(local_boxes):
             global_index = local_offset + i
             center = center_of_box(global_index, x_bins, y_bins, bins_per_axis, box_size)
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
             count = len(central_particles)
             local_counts.append(count)
-        # print(f"Rank {rank} finished boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
+        print(f"Rank {rank} finished boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
 
 
         # Gather back to root
