@@ -148,25 +148,28 @@ if __name__ == "__main__":
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
 
-        # fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
-        # ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
-        # ax2.set_xlabel("Distance (Å)", fontsize=12)
-        # ax2.set_ylabel("Frequency", fontsize=12)
-        # ax2.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
-        # ax2.grid(True, linestyle='--', alpha=0.6)
-        # plt.savefig("DistanceHistogram.png", format='png')
-
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+        ax.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
+        ax.set_xlabel("Distance (Å)", fontsize=12)
+        ax.set_ylabel("Frequency", fontsize=12)
+        ax.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
+        ax.grid(True, linestyle='--', alpha=0.6)
+        plt.savefig("DistanceHistogram.png", format='png')
+
         density_ratios = []
         inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
         
+        plt.clf()
+        plt.cla()
+
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+        
+        print(density_ratios)
 
         ax.hist(density_ratios, color='teal', edgecolor='black', alpha=0.75)
         ax.grid(True, linestyle='--', alpha=0.6)
-        plt.savefig("DistanceHistogram.png", format='png')
         ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
         ax.set_ylabel("Number of partitions", fontsize=12)
         ax.set_title("Relative Density of Partition Centers", fontsize=14)
@@ -180,3 +183,8 @@ if __name__ == "__main__":
             writer.writerow(["Frame", *[f"Box{i}" for i in range(partitions)]])
             for frame_idx, frame in enumerate(particles_near_center):
                 writer.writerow([frame_idx] + frame)
+
+
+
+
+
