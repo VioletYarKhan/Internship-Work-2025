@@ -161,7 +161,7 @@ if __name__ == "__main__":
         density_ratios = []
         inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
         for count in flat_counts:
-            density_ratios.append((flat_counts/inner_volume)/bulk_density)
+            density_ratios.append((count/inner_volume)/bulk_density)
         n, bins, patches = ax.hist(
             density_ratios,
             bins='auto',
