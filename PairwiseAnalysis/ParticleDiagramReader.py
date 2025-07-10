@@ -158,14 +158,10 @@ if __name__ == "__main__":
         inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
-
-        bin_width = 0.05  # try 0.05 or smaller for tighter bars
-        min_val, max_val = min(density_ratios), max(density_ratios)
-        bins = np.arange(min_val, max_val + bin_width, bin_width)
-
-        n, bins, patches = ax.hist(
+        
+        ax.hist(
             density_ratios,
-            bins=bins,
+            bins=30,
             color='#4a90e2',
             edgecolor='black',
             alpha=0.85,
@@ -175,9 +171,9 @@ if __name__ == "__main__":
         ax.set_ylabel("Number of partitions", fontsize=12)
         ax.set_title("Relative Density of Partition Centers", fontsize=14)
         ax.grid(axis='y', linestyle='--', alpha=0.6)
-        for count, x in zip(n, bins[:-1]):
-            if count > 0:
-                ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
+        # for count, x in zip(n, bins[:-1]):
+        #     if count > 0:
+        #         ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
         plt.savefig("WaterDensity.png", format='png')
         plt.show()
 
