@@ -146,16 +146,13 @@ if __name__ == "__main__":
 
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
 
-        ax.scatter(list(range(0, max(flat_counts))), counts_per_n)
-        ax.set_yscale('log')
-
-        fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
-        ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
-        ax2.set_xlabel("Distance (Å)", fontsize=12)
-        ax2.set_ylabel("Frequency", fontsize=12)
-        ax2.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
-        ax2.grid(True, linestyle='--', alpha=0.6)
-        plt.savefig("DistanceHistogram.png", format='png')
+        # fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
+        # ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
+        # ax2.set_xlabel("Distance (Å)", fontsize=12)
+        # ax2.set_ylabel("Frequency", fontsize=12)
+        # ax2.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
+        # ax2.grid(True, linestyle='--', alpha=0.6)
+        # plt.savefig("DistanceHistogram.png", format='png')
 
         
         density_ratios = []
@@ -176,7 +173,7 @@ if __name__ == "__main__":
         for count, x in zip(n, bins[:-1]):
             if count > 0:
                 ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
-        plt.savefig("WaterHistogram.png", format='png')
+        plt.savefig("WaterDensity.png", format='png')
         plt.show()
         with open("particles_near_center.csv", "w", newline='') as f:
             writer = csv.writer(f)
