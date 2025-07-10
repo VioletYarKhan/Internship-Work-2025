@@ -166,8 +166,6 @@ if __name__ == "__main__":
 
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
         
-        print(density_ratios)
-
         ax.hist(density_ratios, color='teal', edgecolor='black', alpha=0.75)
         ax.grid(True, linestyle='--', alpha=0.6)
         ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
