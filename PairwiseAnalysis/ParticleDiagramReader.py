@@ -152,20 +152,30 @@ if __name__ == "__main__":
         # ax2.grid(True, linestyle='--', alpha=0.6)
         # plt.savefig("DistanceHistogram.png", format='png')
 
-        fig, ax = plt.subplots(figsize=(5, 5), tight_layout=True)
+        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
 
         density_ratios = []
         inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
         
-        ax.hist(
+        bin_width = 0.05  # Make this as small as you want
+        min_val = min(density_ratios)
+        max_val = max(density_ratios)
+
+        # Create bins that span from min to max, spaced by bin_width
+        bins = np.arange(min_val, max_val + bin_width, bin_width)
+
+        fig, ax = plt.subplots(figsize=(5, 5), tight_layout=True)
+
+        n, bins, patches = ax.hist(
             density_ratios,
-            bins=30,
+            bins=bins,
+            align='mid',  # centers bars on bin centers
             color='#4a90e2',
             edgecolor='black',
             alpha=0.85,
-            rwidth=1
+            rwidth=1.0  # removes padding between bars
         )
         ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
         ax.set_ylabel("Number of partitions", fontsize=12)
