@@ -164,10 +164,7 @@ if __name__ == "__main__":
         
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
 
-        ax.hist(all_distances, color='teal', edgecolor='black', alpha=0.75)
-        ax.set_xlabel("Distance (Å)", fontsize=12)
-        ax.set_ylabel("Frequency", fontsize=12)
-        ax.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
+        ax.hist(density_ratios, color='teal', edgecolor='black', alpha=0.75)
         ax.grid(True, linestyle='--', alpha=0.6)
         plt.savefig("DistanceHistogram.png", format='png')
         ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
