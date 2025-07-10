@@ -148,46 +148,33 @@ if __name__ == "__main__":
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
 
-        fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
-        ax2.hist(density_ratios, bins=30, color='teal', edgecolor='black', alpha=0.75)
-        ax2.set_xlabel("Distance (Å)", fontsize=12)
-        ax2.set_ylabel("Frequency", fontsize=12)
-        ax2.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
-        ax2.grid(True, linestyle='--', alpha=0.6)
+        # fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
+        # ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
+        # ax2.set_xlabel("Distance (Å)", fontsize=12)
+        # ax2.set_ylabel("Frequency", fontsize=12)
+        # ax2.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
+        # ax2.grid(True, linestyle='--', alpha=0.6)
         # plt.savefig("DistanceHistogram.png", format='png')
 
-        # fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
-
-        # density_ratios = []
-        # inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
-        # for count in flat_counts:
-        #     density_ratios.append((count/inner_volume)/bulk_density)
+        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
+        density_ratios = []
+        inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
+        for count in flat_counts:
+            density_ratios.append((count/inner_volume)/bulk_density)
         
-        # bin_width = 0.05  # Make this as small as you want
-        # min_val = min(density_ratios)
-        # max_val = max(density_ratios)
+        fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
 
-        # # Create bins that span from min to max, spaced by bin_width
-        # bins = np.arange(min_val, max_val + bin_width, bin_width)
-
-        # fig, ax = plt.subplots(figsize=(5, 5), tight_layout=True)
-
-        # n, bins, patches = ax.hist(
-        #     density_ratios,
-        #     bins=bins,
-        #     align='mid',  # centers bars on bin centers
-        #     color='#4a90e2',
-        #     edgecolor='black',
-        #     alpha=0.85,
-        #     rwidth=1.0
-        # )
-        # ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
-        # ax.set_ylabel("Number of partitions", fontsize=12)
-        # ax.set_title("Relative Density of Partition Centers", fontsize=14)
-        # ax.grid(axis='y', linestyle='--', alpha=0.6)
-        # # for count, x in zip(n, bins[:-1]):
-        # #     if count > 0:
-        # #         ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
+        ax.hist(all_distances, color='teal', edgecolor='black', alpha=0.75)
+        ax.set_xlabel("Distance (Å)", fontsize=12)
+        ax.set_ylabel("Frequency", fontsize=12)
+        ax.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
+        ax.grid(True, linestyle='--', alpha=0.6)
+        plt.savefig("DistanceHistogram.png", format='png')
+        ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
+        ax.set_ylabel("Number of partitions", fontsize=12)
+        ax.set_title("Relative Density of Partition Centers", fontsize=14)
+        ax.grid(axis='y', linestyle='--', alpha=0.6)
+   
         plt.savefig("WaterDensity.png", format='png')
         plt.show()
 
