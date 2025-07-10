@@ -142,14 +142,14 @@ if __name__ == "__main__":
         for n in flat_counts:
             counts_per_n[n-1] += 1
         for i in range(len(counts_per_n)):
-            counts_per_n[i] /= sum(flat_counts)
+            counts_per_n[i] /= len(flat_counts)
 
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
 
         ax.scatter(list(range(0, max(flat_counts))), counts_per_n)
         ax.set_yscale('log')
 
-        ax2 = fig.add_subplot(figsize=(8, 5), tight_layout=True)
+        fig2, ax2 = plt.subplots(figsize=(8, 5), tight_layout=True)
         ax2.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
         ax2.set_xlabel("Distance (Å)", fontsize=12)
         ax2.set_ylabel("Frequency", fontsize=12)
