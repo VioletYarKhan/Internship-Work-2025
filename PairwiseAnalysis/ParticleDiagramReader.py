@@ -141,6 +141,7 @@ if __name__ == "__main__":
 
         print(len(flat_counts))
 
+
         counts_per_n = list(range(0, max(flat_counts)))
         for n in flat_counts:
             counts_per_n[n-1] += 1
@@ -151,6 +152,9 @@ if __name__ == "__main__":
         inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
+        
+        print("Num of center particles: " + sum(flat_counts))
+        print("Estimate of center particles: " + partitions*inner_volume*bulk_density)
 
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
         ax.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
