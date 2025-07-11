@@ -38,12 +38,12 @@ if __name__ == "__main__":
     rank = comm.Get_rank()
     size = comm.Get_size()
 
-    PSF = 'w4096.psf'
-    DCD = 'sample.dcd'
+    PSF = 'w32768.psf'
+    DCD = 'eql.50.dcd'
     sim = md.Universe(PSF, DCD)
 
     box_size = sim.trajectory[0].dimensions[0]
-    partition_size_wanted = 15
+    partition_size_wanted = 10
     bins_per_axis = round(box_size/partition_size_wanted)
     # bins_per_axis = 2
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     z_bins = bins_per_axis
     partitions = x_bins * y_bins * z_bins
     partition_size = box_size / bins_per_axis
-    radius_from_center = 3.5
+    radius_from_center = 3
 
 
     assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
@@ -198,6 +198,7 @@ if __name__ == "__main__":
         for count, x in zip(n, bins[:-1]):
             if count > 0:
                 ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
+        ax.set_yscale('log')
         plt.savefig("WaterHistogram.png", format='png')
 
         with open("particles_near_center.csv", "w", newline='') as f:
