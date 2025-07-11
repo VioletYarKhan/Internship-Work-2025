@@ -153,8 +153,8 @@ if __name__ == "__main__":
         for count in flat_counts:
             density_ratios.append((count/inner_volume)/bulk_density)
         
-        print("Num of center particles: " + sum(flat_counts))
-        print("Estimate of center particles: " + partitions*inner_volume*bulk_density)
+        print(f"Num of center particles: {sum(flat_counts)}")
+        print(f"Estimate of center particles: {partitions*inner_volume*bulk_density}")
 
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
         ax.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
