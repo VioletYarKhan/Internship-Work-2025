@@ -139,7 +139,7 @@ if __name__ == "__main__":
     if rank == 0:
         flat_counts = [c for frame in particles_near_center for c in frame]
 
-        print(len(flat_counts))
+        # print(len(flat_counts))
 
 
         counts_per_n = list(range(0, max(flat_counts)))
@@ -154,9 +154,10 @@ if __name__ == "__main__":
             density_ratios.append((count/inner_volume)/bulk_density)
         
         print(f"Bulk Density: {bulk_density}")
-        print(f"Center Area: {partitions*inner_volume*nframes}")
-        print(f"Num of center particles: {sum(flat_counts)}")
-        print(f"Estimate of center particles: {partitions*inner_volume*nframes*bulk_density}")
+        print(f"Frames: {nframes}")
+        # print(f"Center Area: {partitions*inner_volume*nframes}")
+        # print(f"Num of center particles: {sum(flat_counts)}")
+        # print(f"Estimate of center particles: {partitions*inner_volume*nframes*bulk_density}")
 
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
         ax.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
