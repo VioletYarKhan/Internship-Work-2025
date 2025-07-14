@@ -7,6 +7,9 @@ import math
 from mpi4py import MPI
 import csv
 
+# Splits an array into a 2D array containing num_splits equal-sized arrays if 
+# num_splits%len(lst) == 0, otherwise it splits it into num_splits - 1 len(lst)//num_splits
+# length arrays with a trailing len(lst)%num_splits length array
 def array_split(lst, num_splits):
     n = len(lst)
     quotient, remainder = divmod(n, num_splits)
@@ -30,6 +33,7 @@ def center_of_box(index, x_bins, y_bins, bins_per_axis, box_size):
     boxcoords = index_to_xyz(index, x_bins, y_bins)
     return [((pos + 0.5) * (box_size / bins_per_axis)) for pos in boxcoords]
 
+# Returns the euclidian distance between 2 points in 3D space
 def distance3D(coord1, coord2):
     return math.sqrt(sum((a - b) ** 2 for a, b in zip(coord1, coord2)))
 
