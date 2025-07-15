@@ -5,7 +5,7 @@ from mpi4py import MPI
 import csv
 import argparse
 
-# For an array of length l that should be split into n sections, it returns l % n sub-arrays of size l//n + 1 and the rest of size l//n.
+# For an array of length n that should be split into k sections, it returns n % k sub-arrays of size n//k + 1 and the rest of size n//k.
 def array_split(lst, num_splits):
     n = len(lst)
     quotient, remainder = divmod(n, num_splits)
