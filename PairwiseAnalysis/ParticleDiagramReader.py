@@ -45,9 +45,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--psf", help="The PSF file for the simulation", required=True)
     parser.add_argument("-d", "--dcd", help="The DCD file for the simulation", required=True)
-    parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float)
+    parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float, required=True)
     parser.add_argument("-r", "--radius", help="The radius around the center of each partition to use in analysis", type=float)
-    parser.add_argument("-b", "--bins-per-axis", help="The number of partitions per axis", type=int, required=True)
+    parser.add_argument("-b", "--bins-per-axis", help="The number of partitions per axis", type=int)
 
     args = parser.parse_args()
 
@@ -60,24 +60,24 @@ if __name__ == "__main__":
     size = comm.Get_size()
 
     # Load simulation data
-    PSF = args.p
-    DCD = args.d
+    PSF = args.psf
+    DCD = args.dcd
     sim = md.Universe(PSF, DCD)
 
     # Determine box and partitioning parameters
     box_size = sim.trajectory[0].dimensions[0]
-    if args.s:
-        partition_size_wanted = args.s
+    if args.psize:
+        partition_size_wanted = args.psize
         bins_per_axis = round(box_size/partition_size_wanted)
-    if args.a:
-        bins_per_axis = args.a
+    if args.bins_per_axis:
+        bins_per_axis = args.bins_per_axis
 
     x_bins = bins_per_axis
     y_bins = bins_per_axis
     z_bins = bins_per_axis
     partitions = x_bins * y_bins * z_bins
     partition_size = box_size / bins_per_axis
-    radius_from_center = args.r
+    radius_from_center = args.radius
 
     # Ensure partition size is large enough for the chosen radius
     assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
