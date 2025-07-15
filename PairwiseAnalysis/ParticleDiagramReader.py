@@ -4,13 +4,11 @@ import math
 from mpi4py import MPI
 import csv
 import argparse
-from collections import Counter
 
 # For an array of length n that should be split into k sections, it returns n % k sub-arrays of size n//k + 1 and the rest of size n//k.
 def array_split(lst, num_splits):
     n = len(lst)
     quotient, remainder = divmod(n, num_splits)
-
     result = []
     start = 0
     for i in range(num_splits):
@@ -20,21 +18,21 @@ def array_split(lst, num_splits):
     return result
 
 # Converts a linear index to 3D (x, y, z) coordinates based on the number of bins in each direction
+def distance3D(coord1, coord2):
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(coord1, coord2)))
+
+# Returns the center coordinates of a box given its index and binning parameters
 def index_to_xyz(index, x_bins, y_bins):
     z = index // (x_bins * y_bins)
-    remainder = index % (x_bins * y_bins) 
+    remainder = index % (x_bins * y_bins)
     y = remainder // x_bins
     x = remainder % x_bins
     return [x, y, z]
 
-# Returns the center coordinates of a box given its index and binning parameters
+# Returns the euclidian distance between 2 points in 3D space
 def center_of_box(index, x_bins, y_bins, bins_per_axis, box_size):
     boxcoords = index_to_xyz(index, x_bins, y_bins)
     return [((pos + 0.5) * (box_size / bins_per_axis)) for pos in boxcoords]
-
-# Returns the euclidian distance between 2 points in 3D space
-def distance3D(coord1, coord2):
-    return math.sqrt(sum((a - b) ** 2 for a, b in zip(coord1, coord2)))
 
 if __name__ == "__main__":
     # Initialize MPI
@@ -44,205 +42,134 @@ if __name__ == "__main__":
 
     # Initialize argparser
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--psf", help="The PSF file for the simulation", required=True)
-    parser.add_argument("-d", "--dcd", help="The DCD file for the simulation", required=True)
-    parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float)
-    parser.add_argument("-r", "--radius", help="The radius around the center of each partition to use in analysis", type=float, required = True)
-    parser.add_argument("-b", "--bins-per-axis", help="The number of partitions per axis", type=int)
-
+    parser.add_argument("-p", "--psf", required=True)
+    parser.add_argument("-d", "--dcd", required=True)
+    parser.add_argument("-s", "--psize", type=float)
+    parser.add_argument("-r", "--radius", type=float, required=True)
+    parser.add_argument("-b", "--bins-per-axis", type=int)
     args = parser.parse_args()
 
-    if (args.psize is None and args.bins_per_axis is None) or (args.psize is not None and args.bins_per_axis is not None):
-        raise ValueError("You must specify either --psize or --bins-per-axis, not neither or both.")
-    
+    if not args.psize and not args.bins_per_axis:
+        raise Exception("Partition size or bins per axis must be defined")
+
+    overlap_mode = args.psize is not None and args.bins_per_axis is not None
+
     # Load simulation data
-    PSF = args.psf
-    DCD = args.dcd
+    PSF, DCD = args.psf, args.dcd
     sim = md.Universe(PSF, DCD)
+    box_size = sim.trajectory[0].dimensions[0]
+    radius = args.radius
 
     # Determine box and partitioning parameters
-    box_size = sim.trajectory[0].dimensions[0]
-    if args.psize:
-        partition_size_wanted = args.psize
-        bins_per_axis = round(box_size/partition_size_wanted)
-    if args.bins_per_axis:
+    if overlap_mode:
+        psize = args.psize
         bins_per_axis = args.bins_per_axis
-
-    x_bins = bins_per_axis
-    y_bins = bins_per_axis
-    z_bins = bins_per_axis
-    partitions = x_bins * y_bins * z_bins
-    partition_size = box_size / bins_per_axis
-    radius_from_center = args.radius
-
-    # Ensure partition size is large enough for the chosen radius
-    assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
+        spacing = box_size / bins_per_axis
+        # Ensure partition size is large enough for the chosen radius
+        assert psize >= 2 * radius, "Partition size must be >= 2 * radius."
+    else:
+        if args.psize:
+            psize = args.psize
+            bins_per_axis = round(box_size / psize)
+        else:
+            bins_per_axis = args.bins_per_axis
+        spacing = box_size / bins_per_axis
+        psize = spacing
 
     if rank == 0:
-        print(f'{bins_per_axis} bins per axis of {partition_size} cubic angstroms')
+        print(f"{bins_per_axis} bins per axis with spacing {spacing} and partition size {psize}")
 
-    nframes = sim.trajectory.n_frames
-    oxygens = sim.select_atoms('name OH2')
-
+    oxygens = sim.select_atoms("name OH2")
     # Calculate bulk density of oxygens
-    bulk_density = len(oxygens)/pow(box_size, 3)
+    bulk_density = len(oxygens) / (box_size ** 3)
+    nframes = sim.trajectory.n_frames
 
+    all_distances = []
     particles_near_center = []
+
+    if overlap_mode:
+        box_centers = [
+            [(xi + 0.5) * spacing, (yi + 0.5) * spacing, (zi + 0.5) * spacing]
+            for xi in range(bins_per_axis)
+            for yi in range(bins_per_axis)
+            for zi in range(bins_per_axis)
+        ]
+    else:
+        box_centers = list(range(bins_per_axis ** 3))
+
+    box_chunks = array_split(box_centers, size)
+    local_centers = comm.scatter(box_chunks, root=0)
 
     # Loop over all frames in the trajectory
     for frame in range(nframes):
         sim.trajectory[frame]
-
         # Shift coordinates for safety (center box at origin)
         for atom in oxygens:
             atom.position += box_size / 2
+        positions = oxygens.positions.copy()
+        local_counts = []
+        local_dists = []
 
-        # Assign each oxygen atom to a box
-        boxes = [[] for _ in range(partitions)]
-        for particle in oxygens.positions:
-            xID = int((particle[0] / box_size) * x_bins)
-            yID = int((particle[1] / box_size) * y_bins)
-            zID = int((particle[2] / box_size) * z_bins)
+        for center in local_centers:
+            if overlap_mode:
+                center_point = center
+            else:
+                center_point = center_of_box(center, bins_per_axis, bins_per_axis, bins_per_axis, box_size)
+            # Find particles within partition cube
+            nearby_particles = [pos for pos in positions if all(abs(pos[i] - center_point[i]) <= psize / 2 for i in range(3))]
+            central_particles = [p for p in nearby_particles if distance3D(p, center_point) <= radius]
+            noncentral = [p for p in nearby_particles if distance3D(p, center_point) > radius]
 
-            # Clamp indices to valid range
-            xID = min(max(xID, 0), x_bins - 1)
-            yID = min(max(yID, 0), y_bins - 1)
-            zID = min(max(zID, 0), z_bins - 1)
-            boxIndex = xID + yID * x_bins + zID * x_bins * y_bins
-            boxes[boxIndex].append(particle)
+            for j, cp in enumerate(central_particles):
+                for np in noncentral:
+                    local_dists.append(distance3D(cp, np))
+                for oc in central_particles[j+1:]:
+                    local_dists.append(distance3D(cp, oc))
+
+            local_counts.append(len(central_particles))
+
+        frame_counts = comm.gather(local_counts, root=0)
+        frame_dists = comm.gather(local_dists, root=0)
 
         # Rank 0 splits the boxes for parallel processing
         if rank == 0:
-            box_chunks = array_split(boxes, size)
-        else:
-            box_chunks = None
-
-        # Distribute boxes among ranks
-        local_boxes = comm.scatter(box_chunks, root=0)
-
-        # Calculate local offset for global indexing
-        box_sizes = comm.allgather(len(local_boxes))  # each rank tells how many boxes it got
-        local_offset = sum(box_sizes[:rank])
-
-        local_counts = []
-        pairwise_distances = []
-        # print(f"Rank {rank} started boxes {local_offset}-{local_offset+len(local_boxes)} of frame {frame}")
-        for i, box in enumerate(local_boxes):
-            global_index = local_offset + i
-            center = center_of_box(global_index, x_bins, y_bins, bins_per_axis, box_size)
-            central_particles = []
-            noncentral_particles = []
-            # Separate out particles near the center
-            for particle in box:
-                if distance3D(particle, center) <= radius_from_center:
-                    central_particles.append(particle)
-                else:
-                    noncentral_particles.append(particle)
-
-            # Calculate pairwise distances between central and noncentral particles
-            for j, cen_particle in enumerate(central_particles):
-                for particle in noncentral_particles:
-                    pairwise_distances.append(distance3D(particle, cen_particle))
-                for other_central in central_particles[j+1:]:
-                    pairwise_distances.append(distance3D(other_central, cen_particle))
-
-            # Count number of central particles in this box
-            count = len(central_particles)
-            local_counts.append(count)
-
-        # Gather results from all ranks
-        frame_counts = comm.gather(local_counts, root=0)
-        frame_distances = comm.gather(pairwise_distances, root=0)
-
-        if rank == 0:
-            flat = [c for rank_result in frame_counts for c in rank_result]
+            flat = [c for sub in frame_counts for c in sub]
             particles_near_center.append(flat)
-            all_distances = [d for rank_d in frame_distances for d in rank_d]
-
-    # Rank 0 plots and saves results
+            all_distances.extend([d for sub in frame_dists for d in sub])
+    
     if rank == 0:
         flat_counts = [c for frame in particles_near_center for c in frame]
+        inner_volume = (4/3) * math.pi * radius**3
+        density_ratios = [(count / inner_volume) / bulk_density for count in flat_counts]
 
-        # print(len(flat_counts))
-
-        # Calculate histogram of counts per partition
-        counts_per_n = Counter()  
-        for n in flat_counts:
-            counts_per_n[n-1] += 1
-        for i in range(len(counts_per_n)):
-            counts_per_n[i] /= len(flat_counts)
-        
-        # Calculate density ratios for each partition
-        density_ratios = []
-        inner_volume = (4/3)*math.pi*pow(radius_from_center, 3)
-        for count in flat_counts:
-            density_ratios.append((count/inner_volume)/bulk_density)
-        
-        print(f"Bulk Density: {bulk_density}")
-        print(f"Frames: {nframes}")
-        # print(f"Center Area: {partitions*inner_volume*nframes}")
-        # print(f"Num of center particles: {sum(flat_counts)}")
-        # print(f"Estimate of center particles: {partitions*inner_volume*nframes*bulk_density}")
-
-        # Plot histogram of pairwise distances
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
         ax.hist(all_distances, bins=30, color='teal', edgecolor='black', alpha=0.75)
-        ax.set_xlabel("Distance (Å)", fontsize=12)
-        ax.set_ylabel("Frequency", fontsize=12)
-        ax.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
+        ax.set_xlabel("Distance (Å)")
+        ax.set_ylabel("Frequency")
+        ax.set_title("Pairwise Distances Near Partition Centers")
         ax.grid(True, linestyle='--', alpha=0.6)
-        plt.savefig("DistanceHistogram.png", format='png')
-        plt.close(fig)
-
-        # Plot histogram of density ratios
-        density_ratios = []
-        inner_volume = (4/3)*math.pi*pow(radius_from_center, 3) # Volume of sphere with radius radius_from_center
-        for count in flat_counts:
-            density_ratios.append((count/inner_volume)/bulk_density)
-        
+        plt.savefig("DistanceHistogram.png")
         plt.clf()
-        plt.cla()
 
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
-        
         ax.hist(density_ratios, color='teal', edgecolor='black', alpha=0.75)
-        ax.grid(True, linestyle='--', alpha=0.6)
-        ax.set_xlabel(f"Relative Density within {radius_from_center} Å of partition center", fontsize=12)
-        ax.set_ylabel("Number of partitions", fontsize=12)
-        ax.set_title("Relative Density of Partition Centers", fontsize=14)
+        ax.set_xlabel(f"Relative Density within {radius} Å")
+        ax.set_ylabel("Number of centers")
+        ax.set_title("Relative Density in Partitions")
         ax.grid(axis='y', linestyle='--', alpha=0.6)
-   
-        plt.savefig("WaterDensity.png", format='png')
-        plt.close(fig)
-
-
-        plt.cla()
+        plt.savefig("WaterDensity.png")
         plt.clf()
 
-        # Plot histogram of number of oxygens near partition centers
         fig, ax = plt.subplots(figsize=(8, 5), tight_layout=True)
-        n, bins, patches = ax.hist(
-            flat_counts,
-            bins='auto',
-            color='#4a90e2',
-            edgecolor='black',
-            alpha=0.85
-        )
-        ax.set_xlabel(f"Oxygens within {radius_from_center} Å of partition center", fontsize=12)
-        ax.set_ylabel("Number of partitions", fontsize=12)
-        ax.set_title("Distribution of Oxygens Near Partition Centers", fontsize=14)
-        ax.grid(axis='y', linestyle='--', alpha=0.6)
-        for count, x in zip(n, bins[:-1]):
-            if count > 0:
-                ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
-        ax.set_yscale('log')
-        plt.savefig("WaterHistogram.png", format='png')
-        plt.close(fig)
+        n, bins, _ = ax.hist(flat_counts, bins='auto', color='#4a90e2', edgecolor='black', alpha=0.85)
+        ax.set_xlabel(f"Oxygens within {radius} Å")
+        ax.set_ylabel("Number of centers")
+        ax.set_title("Distribution of Oxygens in Spheres")
+        ax.set_yscale("log")
+        plt.savefig("WaterHistogram.png")
 
-
-        # Save per-frame, per-partition counts to CSV
         with open("particles_near_center.csv", "w", newline='') as f:
             writer = csv.writer(f)
-            writer.writerow(["Frame", *[f"Box{i}" for i in range(partitions)]])
+            writer.writerow(["Frame", *[f"Center{i}" for i in range(len(box_centers))]])
             for frame_idx, frame in enumerate(particles_near_center):
                 writer.writerow([frame_idx] + frame)
