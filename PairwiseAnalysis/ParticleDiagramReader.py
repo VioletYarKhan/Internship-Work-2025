@@ -47,34 +47,18 @@ if __name__ == "__main__":
     rank = comm.Get_rank()
     size = comm.Get_size()
 
-    if rank == 0:
-        try:
-            # Initialize argparser
-            parser = argparse.ArgumentParser()
-            parser.add_argument("-p", "--psf", help="The PSF file for the simulation", required=True)
-            parser.add_argument("-d", "--dcd", help="The DCD file for the simulation", required=True)
-            parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float)
-            parser.add_argument("-r", "--radius", help="The radius around the center of each partition to use in analysis", type=float, required = True)
-            parser.add_argument("-b", "--bins-per-axis", help="The number of partitions per axis", type=int)
+    # Initiialize argparser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--psf", help="The PSF file for the simulation", required=True)
+    parser.add_argument("-d", "--dcd", help="The DCD file for the simulation", required=True)
+    parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float)
+    parser.add_argument("-r", "--radius", help="The radius around the center of each partition to use in analysis", type=float, required = True)
+    parser.add_argument("-b", "--bins-per-axis", help="The number of partitions per axis", type=int)
 
-            args = parser.parse_args()
+    args = parser.parse_args()
 
-            if (args.psize is None and args.bins_per_axis is None) or (args.psize is not None and args.bins_per_axis is not None):
-                raise ValueError("You must specify either --psize or --bins-per-axis, not neither or both.")
-            parse_success = True
-        except Exception as e:
-            parse_success = False
-            args = None
-    else:
-        parse_success = None
-        args = None
-
-    parse_success = comm.bcast(parse_success, root=0)
-    if not parse_success:
-        sys.exit()
-
-    # Broadcast parsed arguments to all ranks
-    args = comm.bcast(args, root=0)
+    if (args.psize is None and args.bins_per_axis is None) or (args.psize is not None and args.bins_per_axis is not None):
+        raise ValueError("You must specify either --psize or --bins-per-axis, not neither or both")
 
     # Load simulation data
     PSF = args.psf
