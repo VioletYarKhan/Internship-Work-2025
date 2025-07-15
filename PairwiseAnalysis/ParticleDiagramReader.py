@@ -45,8 +45,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--psf", help="The PSF file for the simulation", required=True)
     parser.add_argument("-d", "--dcd", help="The DCD file for the simulation", required=True)
-    parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float, required=True)
-    parser.add_argument("-r", "--radius", help="The radius around the center of each partition to use in analysis", type=float)
+    parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float)
+    parser.add_argument("-r", "--radius", help="The radius around the center of each partition to use in analysis", type=float, required = True)
     parser.add_argument("-b", "--bins-per-axis", help="The number of partitions per axis", type=int)
 
     args = parser.parse_args()
