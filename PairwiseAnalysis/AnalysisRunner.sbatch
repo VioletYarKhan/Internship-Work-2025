@@ -10,5 +10,5 @@
 
 module load miniforge3/23.11.0
 
-srun -n 80 python ParticleDiagramReader.py -p w32768.psf -d eql.50.dcd -s 10 -r 3.5 
+srun -n 80 python ParticleDiagramReader.py 
 
