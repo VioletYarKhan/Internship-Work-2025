@@ -6,6 +6,7 @@ import MDAnalysis as md
 import math
 from mpi4py import MPI
 import csv
+import argparse
 
 # Splits an array into a 2D array containing num_splits equal-sized arrays if 
 # num_splits%len(lst) == 0, otherwise it splits it into num_splits - 1 len(lst)//num_splits
@@ -44,6 +45,19 @@ if __name__ == "__main__":
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
+
+    # Initialize argparser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--psf", help="The PSF file for the simulation", required=True)
+    parser.add_argument("-d", "--dcd", help="The DCD file for the simulation", required=True)
+    parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float)
+    parser.add_argument("-r", "--radius", help="The radius around the center of each partition to use in analysis", type=float, required = True)
+    parser.add_argument("-b", "--bins-per-axis", help="The number of partitions per axis", type=int)
+
+    args = parser.parse_args()
+
+    if (args.psize is None and args.bins_per_axis is None) or (args.psize is not None and args.bins_per_axis is not None):
+        parser.error("You must specify either --psize or --bins-per-axis, not neither or both.")
 
     # Load simulation data
     PSF = 'w32768.psf'
