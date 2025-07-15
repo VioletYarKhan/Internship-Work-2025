@@ -6,6 +6,7 @@ import MDAnalysis as md
 import math
 from mpi4py import MPI
 import csv
+import argparse
 
 # Splits an array into a 2D array containing num_splits equal-sized arrays if 
 # num_splits%len(lst) == 0, otherwise it splits it into num_splits - 1 len(lst)//num_splits
@@ -40,28 +41,43 @@ def distance3D(coord1, coord2):
     return math.sqrt(sum((a - b) ** 2 for a, b in zip(coord1, coord2)))
 
 if __name__ == "__main__":
+    # Initialize argparser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--psf", help="The PSF file for the simulation", required=True)
+    parser.add_argument("-d", "--dcd", help="The DCD file for the simulation", required=True)
+    parser.add_argument("-s", "--psize", help="The requested partition size in Angstroms", type=float)
+    parser.add_argument("-r", "--radius", help="The radius around the center of each partition to use in analysis", type=float, required = True)
+    parser.add_argument("-b", "--bins-per-axis", help="The number of partitions per axis", type=int)
+
+    args = parser.parse_args()
+
+    if (args.psize is None and args.bins_per_axis is None) or (args.psize is not None and args.bins_per_axis is not None):
+        parser.error("You must specify either --psize or --bins-per-axis, not neither or both.")
+
     # Initialize MPI
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
 
     # Load simulation data
-    PSF = 'w32768.psf'
-    DCD = 'eql.50.dcd'
+    PSF = args.psf
+    DCD = args.dcd
     sim = md.Universe(PSF, DCD)
 
     # Determine box and partitioning parameters
     box_size = sim.trajectory[0].dimensions[0]
-    partition_size_wanted = 10
-    bins_per_axis = round(box_size/partition_size_wanted)
-    # bins_per_axis = 2
+    if args.psize:
+        partition_size_wanted = args.psize
+        bins_per_axis = round(box_size/partition_size_wanted)
+    if args.bins_per_axis:
+        bins_per_axis = args.bins_per_axis
 
     x_bins = bins_per_axis
     y_bins = bins_per_axis
     z_bins = bins_per_axis
     partitions = x_bins * y_bins * z_bins
     partition_size = box_size / bins_per_axis
-    radius_from_center = 3
+    radius_from_center = args.radius
 
     # Ensure partition size is large enough for the chosen radius
     assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
