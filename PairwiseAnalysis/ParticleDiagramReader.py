@@ -4,6 +4,7 @@ import math
 from mpi4py import MPI
 import csv
 import argparse
+from collections import Counter
 
 # For an array of length n that should be split into k sections, it returns n % k sub-arrays of size n//k + 1 and the rest of size n//k.
 def array_split(lst, num_splits):
@@ -165,7 +166,7 @@ if __name__ == "__main__":
         # print(len(flat_counts))
 
         # Calculate histogram of counts per partition
-        counts_per_n = list(range(0, max(flat_counts)))
+        counts_per_n = Counter()  
         for n in flat_counts:
             counts_per_n[n-1] += 1
         for i in range(len(counts_per_n)):
@@ -191,6 +192,7 @@ if __name__ == "__main__":
         ax.set_title("Pairwise Distances Near Partition Centers", fontsize=14)
         ax.grid(True, linestyle='--', alpha=0.6)
         plt.savefig("DistanceHistogram.png", format='png')
+        plt.close(fig)
 
         # Plot histogram of density ratios
         density_ratios = []
@@ -211,7 +213,8 @@ if __name__ == "__main__":
         ax.grid(axis='y', linestyle='--', alpha=0.6)
    
         plt.savefig("WaterDensity.png", format='png')
-        plt.show()
+        plt.close(fig)
+
 
         plt.cla()
         plt.clf()
@@ -234,6 +237,8 @@ if __name__ == "__main__":
                 ax.text(x + (bins[1] - bins[0]) / 2, count, str(int(count)), ha='center', va='bottom', fontsize=10)
         ax.set_yscale('log')
         plt.savefig("WaterHistogram.png", format='png')
+        plt.close(fig)
+
 
         # Save per-frame, per-partition counts to CSV
         with open("particles_near_center.csv", "w", newline='') as f:
