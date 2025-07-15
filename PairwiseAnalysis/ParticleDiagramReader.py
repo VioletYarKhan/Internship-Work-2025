@@ -9,9 +9,7 @@ import csv
 import argparse
 import sys
 
-# Splits an array into a 2D array containing num_splits equal-sized arrays if 
-# num_splits%len(lst) == 0, otherwise it splits it into num_splits - 1 len(lst)//num_splits
-# length arrays with a trailing len(lst)%num_splits length array
+# For an array of length l that should be split into n sections, it returns l % n sub-arrays of size l//n + 1 and the rest of size l//n.
 def array_split(lst, num_splits):
     n = len(lst)
     quotient, remainder = divmod(n, num_splits)
