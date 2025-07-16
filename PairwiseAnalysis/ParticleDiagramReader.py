@@ -78,7 +78,6 @@ if __name__ == "__main__":
         radius_from_center = args.radius
 
         # Ensure partition size is large enough for the chosen radius
-
         print(f'{bins_per_axis} bins per axis of {partition_size} cubic angstroms')
 
         nframes = sim.trajectory.n_frames
