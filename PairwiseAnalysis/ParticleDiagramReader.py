@@ -55,64 +55,82 @@ if __name__ == "__main__":
     if (args.psize is None and args.bins_per_axis is None) or (args.psize is not None and args.bins_per_axis is not None):
         raise ValueError("You must specify either --psize or --bins-per-axis, not neither or both.")
     
-    # Load simulation data
-    PSF = args.psf
-    DCD = args.dcd
-    sim = md.Universe(PSF, DCD)
-
-    # Determine box and partitioning parameters
-    box_size = sim.trajectory[0].dimensions[0]
-    if args.psize:
-        partition_size_wanted = args.psize
-        bins_per_axis = round(box_size/partition_size_wanted)
-    if args.bins_per_axis:
-        bins_per_axis = args.bins_per_axis
-
-    x_bins = bins_per_axis
-    y_bins = bins_per_axis
-    z_bins = bins_per_axis
-    partitions = x_bins * y_bins * z_bins
-    partition_size = box_size / bins_per_axis
-    radius_from_center = args.radius
-
-    # Ensure partition size is large enough for the chosen radius
-    assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
-
     if rank == 0:
+        # Load simulation data
+        PSF = args.psf
+        DCD = args.dcd
+        sim = md.Universe(PSF, DCD)
+    
+
+        # Determine box and partitioning parameters
+        box_size = sim.trajectory[0].dimensions[0]
+        if args.psize:
+            partition_size_wanted = args.psize
+            bins_per_axis = round(box_size/partition_size_wanted)
+        if args.bins_per_axis:
+            bins_per_axis = args.bins_per_axis
+
+        x_bins = bins_per_axis
+        y_bins = bins_per_axis
+        z_bins = bins_per_axis
+        partitions = x_bins * y_bins * z_bins
+        partition_size = box_size / bins_per_axis
+        radius_from_center = args.radius
+
+        # Ensure partition size is large enough for the chosen radius
+
         print(f'{bins_per_axis} bins per axis of {partition_size} cubic angstroms')
 
-    nframes = sim.trajectory.n_frames
-    oxygens = sim.select_atoms('name OH2')
+        nframes = sim.trajectory.n_frames
+        oxygens = sim.select_atoms('name OH2')
 
-    # Calculate bulk density of oxygens
-    bulk_density = len(oxygens)/pow(box_size, 3)
+        # Calculate bulk density of oxygens
+        bulk_density = len(oxygens)/pow(box_size, 3)
+    else:
+        partition_size = None
+        x_bins = None
+        y_bins = None
+        z_bins = None
+        box_size = None
+        radius_from_center = None
+
+
+    partition_size = comm.bcast(partition_size, root=0)
+    x_bins = comm.bcast(x_bins, root=0)
+    y_bins = comm.bcast(y_bins, root=0)
+    z_bins = comm.bcast(z_bins, root=0)
+    box_size = comm.bcast(box_size, root=0)
+    radius_from_center = comm.bcast(radius_from_center, root=0)
+
+    assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
+
 
     particles_near_center = []
 
     # Loop over all frames in the trajectory
     for frame in range(nframes):
-        sim.trajectory[frame]
-
-        # Shift coordinates for safety (center box at origin)
-        for atom in oxygens:
-            atom.position += box_size / 2
-
-        # Assign each oxygen atom to a box
-        boxes = [[] for _ in range(partitions)]
-        for particle in oxygens.positions:
-            xID = int((particle[0] / box_size) * x_bins)
-            yID = int((particle[1] / box_size) * y_bins)
-            zID = int((particle[2] / box_size) * z_bins)
-
-            # Clamp indices to valid range
-            xID = min(max(xID, 0), x_bins - 1)
-            yID = min(max(yID, 0), y_bins - 1)
-            zID = min(max(zID, 0), z_bins - 1)
-            boxIndex = xID + yID * x_bins + zID * x_bins * y_bins
-            boxes[boxIndex].append(particle)
-
-        # Rank 0 splits the boxes for parallel processing
         if rank == 0:
+            sim.trajectory[frame]
+
+            # Shift coordinates for safety (center box at origin)
+            for atom in oxygens:
+                atom.position += box_size / 2
+
+            # Assign each oxygen atom to a box
+            boxes = [[] for _ in range(partitions)]
+            for particle in oxygens.positions:
+                xID = int((particle[0] / box_size) * x_bins)
+                yID = int((particle[1] / box_size) * y_bins)
+                zID = int((particle[2] / box_size) * z_bins)
+
+                # Clamp indices to valid range
+                xID = min(max(xID, 0), x_bins - 1)
+                yID = min(max(yID, 0), y_bins - 1)
+                zID = min(max(zID, 0), z_bins - 1)
+                boxIndex = xID + yID * x_bins + zID * x_bins * y_bins
+                boxes[boxIndex].append(particle)
+
+            # Rank 0 splits the boxes for parallel processing
             box_chunks = array_split(boxes, size)
         else:
             box_chunks = None
