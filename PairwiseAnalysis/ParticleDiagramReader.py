@@ -94,6 +94,7 @@ if __name__ == "__main__":
         box_size = None
         radius_from_center = None
         nframes = None
+        bins_per_axis = None
 
 
     partition_size = comm.bcast(partition_size, root=0)
@@ -103,6 +104,7 @@ if __name__ == "__main__":
     box_size = comm.bcast(box_size, root=0)
     radius_from_center = comm.bcast(radius_from_center, root=0)
     nframes = comm.bcast(nframes, root=0)
+    bins_per_axis = comm.bcast(bins_per_axis, root=0)
 
     assert partition_size >= 2 * radius_from_center, (f"Partition size is {partition_size} cubic angstroms, which is less than 2r ({2 * radius_from_center}).")
 
