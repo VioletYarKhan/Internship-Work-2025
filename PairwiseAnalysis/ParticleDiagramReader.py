@@ -193,7 +193,7 @@ if __name__ == "__main__":
         for i in range(len(counts_per_n)):
             counts_per_n[i] /= len(flat_counts)
 
-        print(f"Zero Cases: {counts_per_n[0]} or a probability of {counts_per_n[0]/math.pow(bins_per_axis, 3)*nframes}")
+        print(f"Zero Cases: {counts_per_n[0]} or a probability of {counts_per_n[0]/((math.pow(bins_per_axis, 3)*nframes))}")
         
         # Calculate density ratios for each partition
         density_ratios = []
