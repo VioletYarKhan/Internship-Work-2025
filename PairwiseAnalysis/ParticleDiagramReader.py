@@ -184,13 +184,14 @@ if __name__ == "__main__":
     if rank == 0:
         flat_counts = [c for frame in particles_near_center for c in frame]
 
+        print(f"Zero Cases: {list.count(flat_counts, 0)} or a probability of {list.count(flat_counts, 0)/((math.pow(bins_per_axis, 3)*nframes))}")
+
         # print(len(flat_counts))
 
         # Calculate histogram of counts per partition
         counts_per_n = Counter()
         for n in flat_counts:
             counts_per_n[n-1] += 1
-        print(f"Zero Cases: {counts_per_n[0]} or a probability of {counts_per_n[0]/((math.pow(bins_per_axis, 3)*nframes))}")
         for i in range(len(counts_per_n)):
             counts_per_n[i] /= len(flat_counts)
 
